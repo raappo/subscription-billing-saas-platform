@@ -75,19 +75,26 @@ const generateInvoice = async (req, res, next) => {
       }
     }
 
+    // Calculate subtotal before proration credit
+    let subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+
     // 3. Proration credit (if any from a plan change)
     if (subscription.prorationCredits > 0) {
-      lineItems.push({
-        description: `Proration credit from plan change`,
-        quantity: 1,
-        unitPrice: -subscription.prorationCredits,
-        amount: -subscription.prorationCredits,
-        type: 'proration_credit',
-      });
+      const creditToApply = Math.min(subscription.prorationCredits, subtotal);
+      if (creditToApply > 0) {
+        lineItems.push({
+          description: `Proration credit from plan change`,
+          quantity: 1,
+          unitPrice: -creditToApply,
+          amount: -creditToApply,
+          type: 'proration_credit',
+        });
+        subtotal -= creditToApply;
+        
+        // Deduct applied credit from subscription
+        subscription.prorationCredits -= creditToApply;
+      }
     }
-
-    // Calculate subtotal
-    const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
 
     // 4. Coupon discount
     let discount = 0;

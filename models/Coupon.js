@@ -57,7 +57,7 @@ const couponSchema = new mongoose.Schema(
   }
 );
 
-couponSchema.index({ code: 1 }, { unique: true });
+// Index declared via schema-level unique:true on code field.
 couponSchema.index({ isActive: 1 });
 
 // Check if coupon is currently valid

@@ -42,33 +42,32 @@ const seed = async () => {
     console.log('✅ Cleared existing data');
 
     // ─── Users ──────────────────────────────────────────────────────────────
-    const passwordHash = await bcrypt.hash('password123', 12);
 
     const admin = await User.create({
       name: 'Admin User',
       email: 'admin@saas.com',
-      passwordHash,
+      passwordHash: 'password123',
       role: 'admin',
     });
 
     const customer1 = await User.create({
       name: 'Alice Johnson',
       email: 'alice@example.com',
-      passwordHash,
+      passwordHash: 'password123',
       role: 'customer',
     });
 
     const customer2 = await User.create({
       name: 'Bob Smith',
       email: 'bob@example.com',
-      passwordHash,
+      passwordHash: 'password123',
       role: 'customer',
     });
 
     const customer3 = await User.create({
       name: 'Charlie Brown',
       email: 'charlie@example.com',
-      passwordHash,
+      passwordHash: 'password123',
       role: 'customer',
     });
 

@@ -132,15 +132,14 @@ invoiceSchema.index({ subscriptionId: 1 });
 invoiceSchema.index({ customerId: 1 });
 invoiceSchema.index({ status: 1 });
 invoiceSchema.index({ dueDate: 1 });
-invoiceSchema.index({ invoiceNumber: 1 }, { unique: true });
+// Index declared via schema-level unique:true on invoiceNumber field.
 
 // Auto-generate invoice number
-invoiceSchema.pre('validate', async function (next) {
+invoiceSchema.pre('validate', async function () {
   if (!this.invoiceNumber) {
     const count = await mongoose.model('Invoice').countDocuments();
     this.invoiceNumber = `INV-${String(count + 1).padStart(6, '0')}`;
   }
-  next();
 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

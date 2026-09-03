@@ -44,7 +44,7 @@ const planSchema = new mongoose.Schema(
   }
 );
 
-planSchema.index({ name: 1 }, { unique: true });
+// Index declared via schema-level unique:true on name field.
 planSchema.index({ isActive: 1 });
 
 module.exports = mongoose.model('Plan', planSchema);

@@ -35,14 +35,14 @@ const userSchema = new mongoose.Schema(
 );
 
 // Index for fast login lookups and uniqueness enforcement
-userSchema.index({ email: 1 }, { unique: true });
+// Index declared via schema-level unique:true on email field.
+// No duplicate schema.index() needed — Mongoose auto-creates it.
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('passwordHash')) return next();
+userSchema.pre('save', async function () {
+  if (!this.isModified('passwordHash')) return;
   const salt = await bcrypt.genSalt(12);
   this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
-  next();
 });
 
 // Compare password method
