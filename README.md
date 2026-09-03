@@ -66,12 +66,10 @@ npm test
 
 ## Deployment
 
-This is a Node.js backend with a MongoDB database, so it **cannot** be deployed to static hosting like GitHub Pages. 
+To deploy this backend application, you will need a platform that supports Node.js applications (such as Render, Heroku, or AWS). It cannot be deployed to static hosts like GitHub Pages.
 
-We recommend deploying to **Render**:
-1. Create a free account on [Render](https://render.com/).
-2. Create a new "Web Service" connected to your GitHub repository.
-3. Provide the `MONGO_URI` environment variable (you can use a free MongoDB Atlas cluster for the database).
-4. Render will automatically detect the Node.js environment and start the application.
-
-*A `render.yaml` Blueprint is included in this repository to make deployment one-click.*
+**Deploying to Render (Recommended Free Option):**
+1. Connect this repository to your [Render](https://render.com/) account.
+2. The included `render.yaml` Blueprint will automatically configure the web service.
+3. Add a `MONGODB_URI` environment variable in the Render dashboard (e.g., using a free cluster from MongoDB Atlas).
+4. The service will build and start automatically.
