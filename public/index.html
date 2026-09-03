@@ -116,7 +116,6 @@
     const runTestsBtn = document.getElementById('runTestsBtn');
     const logContainer = document.getElementById('logContainer');
 
-    // Helper to log UI blocks
     function addLogBlock(title) {
       const id = 'log-' + Date.now() + Math.random().toString(36).substr(2, 9);
       const div = document.createElement('div');
@@ -145,15 +144,19 @@
       contentEl.textContent = JSON.stringify(data, null, 2);
     }
 
-    // Delay helper to make simulation readable
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
     runTestsBtn.addEventListener('click', async () => {
       runTestsBtn.disabled = true;
       runTestsBtn.textContent = 'Simulation Running...';
-      logContainer.innerHTML = ''; // clear previous
+      logContainer.innerHTML = '';
 
       let adminToken = '';
+      let customerToken = '';
+      let basicPlanId = '';
+      let proPlanId = '';
+      let subscriptionId = '';
+      let invoiceId = '';
       
       try {
         // Step 1: Health Check
@@ -161,7 +164,7 @@
         let res = await fetch('/health');
         let data = await res.json();
         updateLogBlock(logId, res.status, data);
-        await delay(800);
+        await delay(500);
 
         // Step 2: Admin Login
         logId = addLogBlock('2. Admin Authentication (/api/auth/login)');
@@ -173,36 +176,106 @@
         data = await res.json();
         if(data.success) adminToken = data.data.token;
         updateLogBlock(logId, res.status, data);
-        await delay(1000);
+        await delay(600);
 
-        if(!adminToken) throw new Error("Could not get admin token");
+        // Step 3: Customer Login
+        logId = addLogBlock('3. Customer Authentication (/api/auth/login)');
+        res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'alice@example.com', password: 'password123' })
+        });
+        data = await res.json();
+        if(data.success) customerToken = data.data.token;
+        updateLogBlock(logId, res.status, data);
+        await delay(600);
 
-        // Step 3: Fetch Pricing Plans
-        logId = addLogBlock('3. Fetching Pricing Plans (/api/plans)');
+        // Step 4: Fetch Pricing Plans
+        logId = addLogBlock('4. Fetching Pricing Plans (/api/plans)');
         res = await fetch('/api/plans');
         data = await res.json();
+        if(data.success && data.data.plans.length > 1) {
+          basicPlanId = data.data.plans[0]._id;
+          proPlanId = data.data.plans[1]._id;
+        }
         updateLogBlock(logId, res.status, data);
-        await delay(1000);
+        await delay(600);
 
-        // Step 4: Admin Revenue Report
-        logId = addLogBlock('4. Fetching Admin Revenue Reports (/api/admin/reports/revenue)');
-        res = await fetch('/api/admin/reports/revenue', {
-          headers: { 'Authorization': `Bearer ${adminToken}` }
+        // Step 5: Customer Creates Subscription
+        logId = addLogBlock('5. Customer Subscribes to Plan (/api/subscriptions)');
+        res = await fetch('/api/subscriptions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${customerToken}` },
+          body: JSON.stringify({ planId: basicPlanId })
+        });
+        data = await res.json();
+        // Don't fail if already subscribed in a previous run, just grab the ID
+        if(data.success) {
+          subscriptionId = data.data.subscription._id;
+        } else if (data.errorCode === 'ALREADY_SUBSCRIBED') {
+          // If already subscribed, fetch it instead
+          const subRes = await fetch('/api/subscriptions', { headers: { 'Authorization': `Bearer ${customerToken}` }});
+          const subData = await subRes.json();
+          subscriptionId = subData.data.subscriptions[0]._id;
+        }
+        updateLogBlock(logId, res.status, data);
+        await delay(800);
+
+        // Step 6: Record Usage
+        logId = addLogBlock('6. Record API Usage (/api/usage)');
+        res = await fetch('/api/usage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+          body: JSON.stringify({ subscriptionId, metric: 'api_calls', quantity: 1500, unitPrice: 0.05 })
         });
         data = await res.json();
         updateLogBlock(logId, res.status, data);
-        await delay(1000);
+        await delay(800);
 
-        // Step 5: Fetch Active Coupons
-        logId = addLogBlock('5. Fetching Active Coupons (/api/coupons)');
-        res = await fetch('/api/coupons', {
+        // Step 7: Generate Invoice (Admin)
+        logId = addLogBlock('7. Admin Generates Invoice (/api/invoices/generate)');
+        res = await fetch('/api/invoices/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+          body: JSON.stringify({ subscriptionId })
+        });
+        data = await res.json();
+        if(data.success) invoiceId = data.data.invoice._id;
+        updateLogBlock(logId, res.status, data);
+        await delay(800);
+
+        // Step 8: Pay Invoice (Customer)
+        if (invoiceId) {
+          logId = addLogBlock('8. Customer Pays Invoice (/api/invoices/:id/pay)');
+          res = await fetch(`/api/invoices/${invoiceId}/pay`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${customerToken}` },
+            body: JSON.stringify({ paymentMethod: 'card' })
+          });
+          data = await res.json();
+          updateLogBlock(logId, res.status, data);
+          await delay(800);
+        }
+
+        // Step 9: Customer Dashboard
+        logId = addLogBlock('9. Load Customer Dashboard (/api/dashboard/customer)');
+        res = await fetch('/api/dashboard/customer', {
+          headers: { 'Authorization': `Bearer ${customerToken}` }
+        });
+        data = await res.json();
+        updateLogBlock(logId, res.status, data);
+        await delay(600);
+
+        // Step 10: Admin Revenue Report
+        logId = addLogBlock('10. Load Admin Revenue Analytics (/api/admin/reports/revenue)');
+        res = await fetch('/api/admin/reports/revenue', {
           headers: { 'Authorization': `Bearer ${adminToken}` }
         });
         data = await res.json();
         updateLogBlock(logId, res.status, data);
         
         // Done
-        runTestsBtn.textContent = '✓ Simulation Complete';
+        runTestsBtn.textContent = '✓ Full E2E Simulation Complete';
         runTestsBtn.style.backgroundColor = 'var(--success)';
 
       } catch (error) {
@@ -214,7 +287,7 @@
       } finally {
         setTimeout(() => {
           runTestsBtn.disabled = false;
-          runTestsBtn.textContent = '▶ Run Again';
+          runTestsBtn.textContent = '▶ Run E2E Test Again';
           runTestsBtn.style.backgroundColor = 'var(--primary)';
         }, 2000);
       }
