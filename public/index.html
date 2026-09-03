@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SaaS Platform API Visual Tester</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --primary: #3b82f6;
+      --success: #10b981;
+      --error: #ef4444;
+      --border: #334155;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem;
+    }
+    h1, h2 { margin-top: 0; }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: opacity 0.2s;
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      display: block;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { background-color: var(--border); cursor: not-allowed; }
+    .log-container {
+      margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .log-entry {
+      background-color: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    .status-success { color: var(--success); }
+    .status-error { color: var(--error); }
+    .status-pending { color: var(--primary); }
+    pre {
+      background-color: #000;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 0.9rem;
+      margin: 0;
+      color: #34d399;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>SaaS Billing API — Visual E2E Tester</h1>
+      <p style="color: #94a3b8;">Click the button below to automatically run a full simulation of the backend platform in real-time.</p>
+    </header>
+
+    <button id="runTestsBtn">▶ Run Full Platform Simulation</button>
+
+    <div class="log-container" id="logContainer">
+      <!-- Logs will appear here -->
+    </div>
+  </div>
+
+  <script>
+    const runTestsBtn = document.getElementById('runTestsBtn');
+    const logContainer = document.getElementById('logContainer');
+
+    // Helper to log UI blocks
+    function addLogBlock(title) {
+      const id = 'log-' + Date.now() + Math.random().toString(36).substr(2, 9);
+      const div = document.createElement('div');
+      div.className = 'log-entry';
+      div.id = id;
+      div.innerHTML = `
+        <div class="log-header">
+          <span><span class="spinner"></span> ${title}</span>
+          <span class="status-pending" id="${id}-status">Running...</span>
+        </div>
+        <pre id="${id}-content">Waiting for response...</pre>
+      `;
+      logContainer.prepend(div);
+      return id;
+    }
+
+    function updateLogBlock(id, status, data, isError = false) {
+      const statusEl = document.getElementById(`${id}-status`);
+      const contentEl = document.getElementById(`${id}-content`);
+      const headerTextEl = statusEl.previousElementSibling;
+      
+      headerTextEl.innerHTML = headerTextEl.innerHTML.replace('<span class="spinner"></span>', '✓');
+      
+      statusEl.textContent = status;
+      statusEl.className = isError ? 'status-error' : 'status-success';
+      contentEl.textContent = JSON.stringify(data, null, 2);
+    }
+
+    // Delay helper to make simulation readable
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    runTestsBtn.addEventListener('click', async () => {
+      runTestsBtn.disabled = true;
+      runTestsBtn.textContent = 'Simulation Running...';
+      logContainer.innerHTML = ''; // clear previous
+
+      let adminToken = '';
+      
+      try {
+        // Step 1: Health Check
+        let logId = addLogBlock('1. System Health Check (/health)');
+        let res = await fetch('/health');
+        let data = await res.json();
+        updateLogBlock(logId, res.status, data);
+        await delay(800);
+
+        // Step 2: Admin Login
+        logId = addLogBlock('2. Admin Authentication (/api/auth/login)');
+        res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'admin@saas.com', password: 'password123' })
+        });
+        data = await res.json();
+        if(data.success) adminToken = data.data.token;
+        updateLogBlock(logId, res.status, data);
+        await delay(1000);
+
+        if(!adminToken) throw new Error("Could not get admin token");
+
+        // Step 3: Fetch Pricing Plans
+        logId = addLogBlock('3. Fetching Pricing Plans (/api/plans)');
+        res = await fetch('/api/plans');
+        data = await res.json();
+        updateLogBlock(logId, res.status, data);
+        await delay(1000);
+
+        // Step 4: Admin Revenue Report
+        logId = addLogBlock('4. Fetching Admin Revenue Reports (/api/admin/reports/revenue)');
+        res = await fetch('/api/admin/reports/revenue', {
+          headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        data = await res.json();
+        updateLogBlock(logId, res.status, data);
+        await delay(1000);
+
+        // Step 5: Fetch Active Coupons
+        logId = addLogBlock('5. Fetching Active Coupons (/api/coupons)');
+        res = await fetch('/api/coupons', {
+          headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        data = await res.json();
+        updateLogBlock(logId, res.status, data);
+        
+        // Done
+        runTestsBtn.textContent = '✓ Simulation Complete';
+        runTestsBtn.style.backgroundColor = 'var(--success)';
+
+      } catch (error) {
+        console.error(error);
+        runTestsBtn.textContent = '❌ Simulation Failed';
+        runTestsBtn.style.backgroundColor = 'var(--error)';
+        const id = addLogBlock('Error encountered');
+        updateLogBlock(id, 'ERROR', { message: error.message }, true);
+      } finally {
+        setTimeout(() => {
+          runTestsBtn.disabled = false;
+          runTestsBtn.textContent = '▶ Run Again';
+          runTestsBtn.style.backgroundColor = 'var(--primary)';
+        }, 2000);
+      }
+    });
+  </script>
+</body>
+</html>
