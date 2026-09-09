@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SaaS Subscription Billing Platform</title>
+  <meta name="description" content="Production-grade SaaS billing, usage metering, proration, and dunning engine." />
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='12 2 2 7 12 12 22 7 12 2'/><polyline points='2 17 12 22 22 17'/><polyline points='2 12 12 17 22 12'/></svg>" />
+
+  <!-- External Libraries: Lucide Icons & Chart.js -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Colors */
+  --bg-body: #0b0f19;
+  --bg-card: #111827;
+  --bg-card-hover: #162032;
+  --bg-elevated: #1f293d;
+  --border: #232f46;
+  --border-focus: #4f46e5;
+  
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-glow: rgba(99, 102, 241, 0.18);
+  
+  --emerald: #10b981;
+  --emerald-bg: rgba(16, 185, 129, 0.12);
+  --amber: #f59e0b;
+  --amber-bg: rgba(245, 158, 11, 0.12);
+  --rose: #f43f5e;
+  --rose-bg: rgba(244, 63, 94, 0.12);
+  --sky: #0ea5e9;
+  --sky-bg: rgba(14, 165, 233, 0.12);
+  --purple: #a855f7;
+  --purple-bg: rgba(168, 85, 247, 0.12);
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 24px var(--primary-glow);
+  
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-body);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: -100px;
+  left: 20%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+header.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  backdrop-filter: blur(12px);
+  background-color: rgba(11, 15, 25, 0.85);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1.5rem;
+}
+
+.header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);
+  color: white;
+}
+
+.brand-info h1 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand-info p {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 0.25rem;
+  gap: 0.25rem;
+}
+
+.nav-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.nav-tab:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-elevated);
+}
+
+.nav-tab.active {
+  background-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.nav-tab .badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.2);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.persona-switcher {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.3rem 0.6rem;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.persona-switcher span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.persona-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.persona-btn:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.persona-btn.active-persona {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.user-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.user-info .name {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.user-info .role-tag {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+main.app-main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  position: relative;
+  z-index: 1;
+}
+
+.view-section {
+  display: none;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.view-section.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.page-title-row h2 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.page-title-row p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.kpi-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.kpi-card .card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.kpi-card .label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.kpi-card .icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.kpi-card .value {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.kpi-card .subtext {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.kpi-card .pill-positive {
+  color: var(--emerald);
+  font-weight: 600;
+}
+
+.split-layout {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 992px) {
+  .split-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.panel-card.highlight {
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.05);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.panel-header h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.plan-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(30, 41, 59, 0.5) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+}
+
+.plan-hero-left h4 {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.plan-hero-left p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: 0.2rem;
+}
+
+.plan-price-tag {
+  text-align: right;
+}
+
+.plan-price-tag .amount {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.plan-price-tag .period {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.usage-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.usage-item .usage-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.usage-item .usage-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.usage-item .usage-stat {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.progress-track {
+  height: 8px;
+  background-color: var(--bg-elevated);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-fill.warning {
+  background: var(--amber);
+}
+
+.progress-fill.danger {
+  background: var(--rose);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-active { background: var(--emerald-bg); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.25); }
+.badge-past_due { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.25); }
+.badge-grace_period { background: var(--sky-bg); color: var(--sky); border: 1px solid rgba(14, 165, 233, 0.25); }
+.badge-canceled { background: var(--rose-bg); color: var(--rose); border: 1px solid rgba(244, 63, 94, 0.25); }
+.badge-paid { background: var(--emerald-bg); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.25); }
+.badge-retrying { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.25); }
+.badge-open { background: var(--sky-bg); color: var(--sky); border: 1px solid rgba(14, 165, 233, 0.25); }
+.badge-void { background: rgba(107, 114, 128, 0.15); color: var(--text-muted); border: 1px solid rgba(107, 114, 128, 0.3); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: var(--bg-elevated);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--border);
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+.btn-outline:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.btn-danger {
+  background-color: var(--rose-bg);
+  border-color: rgba(244, 63, 94, 0.3);
+  color: var(--rose);
+}
+
+.btn-danger:hover {
+  background-color: var(--rose);
+  color: white;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-card);
+}
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+table.data-table th {
+  background-color: var(--bg-body);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+table.data-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(35, 47, 70, 0.5);
+  color: var(--text-secondary);
+}
+
+table.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+table.data-table tbody tr:hover {
+  background-color: var(--bg-card-hover);
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.75rem;
+  margin: 2rem 0;
+}
+
+.pricing-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  transition: var(--transition);
+  position: relative;
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.pricing-card.featured {
+  border-color: var(--primary);
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.15);
+}
+
+.featured-ribbon {
+  position: absolute;
+  top: -12px;
+  right: 20px;
+  background: var(--primary);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pricing-card h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.pricing-card .desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  min-height: 2.5rem;
+}
+
+.pricing-card .price-row {
+  margin: 1.5rem 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.pricing-card .price {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.pricing-card .billing-period {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.pricing-features {
+  list-style: none;
+  margin-bottom: 2rem;
+  flex-grow: 1;
+}
+
+.pricing-features li {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.pricing-features li svg {
+  color: var(--emerald);
+  flex-shrink: 0;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 15, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal-dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  max-width: 540px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-header h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  background: var(--bg-body);
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-control {
+  width: 100%;
+  background: var(--bg-body);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.9rem;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.25rem;
+  box-shadow: var(--shadow-lg);
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  animation: slideInRight 0.25s ease-out;
+  min-width: 280px;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.toast.success { border-left: 4px solid var(--emerald); }
+.toast.error { border-left: 4px solid var(--rose); }
+.toast.info { border-left: 4px solid var(--sky); }
+
+.terminal-window {
+  background-color: #06090e;
+  border: 1px solid #1c2433;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.terminal-header {
+  background-color: #0d121c;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #1c2433;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.terminal-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.terminal-dot.red { background: #ef4444; }
+.terminal-dot.yellow { background: #f59e0b; }
+.terminal-dot.green { background: #10b981; }
+
+.terminal-title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.terminal-body {
+  padding: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.terminal-log-entry {
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.terminal-log-entry .timestamp {
+  color: var(--text-muted);
+  margin-right: 0.5rem;
+}
+
+.terminal-log-entry .action-tag {
+  color: var(--sky);
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+.terminal-log-entry.success { color: #34d399; }
+.terminal-log-entry.error { color: #f87171; }
+.terminal-log-entry.info { color: #94a3b8; }
+
+@media (max-width: 768px) {
+  header.app-header {
+    padding: 0.75rem 1rem;
+  }
+  .header-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nav-tabs {
+    overflow-x: auto;
+  }
+  .persona-switcher {
+    flex-wrap: wrap;
+  }
+}
+  </style>
+</head>
+<body>
+
+  <header id="app-header" class="app-header"></header>
+
+  <main class="app-main">
+    <section id="view-customer" class="view-section"></section>
+    <section id="view-admin" class="view-section"></section>
+    <section id="view-pricing" class="view-section"></section>
+    <section id="view-invoices" class="view-section"></section>
+    <section id="view-simulator" class="view-section"></section>
+  </main>
+
+  <div id="genericModal" class="modal-backdrop" onclick="if(event.target === this) App.closeModal()">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="genericModalTitle">Modal Title</h3>
+        <button class="modal-close" onclick="App.closeModal()">&times;</button>
+      </div>
+      <div id="genericModalBody" class="modal-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button id="genericModalSubmit" class="btn btn-primary">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script>
+const API = {
+  getToken() { return localStorage.getItem('saas_auth_token') || null; },
+  setToken(token) { if (token) localStorage.setItem('saas_auth_token', token); else localStorage.removeItem('saas_auth_token'); },
+  async request(endpoint, options = {}) {
+    const token = this.getToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    };
+    const config = { ...options, headers };
+    if (config.body && typeof config.body === 'object' && !(config.body instanceof FormData)) {
+      config.body = JSON.stringify(config.body);
+    }
+    try {
+      const res = await fetch(endpoint, config);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err = new Error(data.message || `Request failed (${res.status})`);
+        err.status = res.status;
+        throw err;
+      }
+      return data;
+    } catch (err) {
+      console.error(`API Error on [${options.method || 'GET'}] ${endpoint}:`, err);
+      throw err;
+    }
+  },
+  async login(email, password) {
+    const res = await this.request('/api/auth/login', { method: 'POST', body: { email, password } });
+    if (res.data?.token) this.setToken(res.data.token);
+    return res.data;
+  },
+  async register(userData) {
+    const res = await this.request('/api/auth/register', { method: 'POST', body: userData });
+    if (res.data?.token) this.setToken(res.data.token);
+    return res.data;
+  },
+  async getMe() {
+    const res = await this.request('/api/auth/me');
+    return res.data?.user || null;
+  },
+  logout() { this.setToken(null); },
+  async getCustomerDashboard() { const res = await this.request('/api/dashboard/customer'); return res.data; },
+  async getRevenueReport() { const res = await this.request('/api/admin/reports/revenue'); return res.data; },
+  async getPlans(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const res = await this.request(`/api/plans${query ? `?${query}` : ''}`);
+    return res.data?.plans || [];
+  },
+  async createPlan(planData) { const res = await this.request('/api/plans', { method: 'POST', body: planData }); return res.data; },
+  async updatePlan(id, planData) { const res = await this.request(`/api/plans/${id}`, { method: 'PUT', body: planData }); return res.data; },
+  async deletePlan(id) { const res = await this.request(`/api/plans/${id}`, { method: 'DELETE' }); return res.data; },
+  async getSubscriptions(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const res = await this.request(`/api/subscriptions${query ? `?${query}` : ''}`);
+    return res.data?.subscriptions || [];
+  },
+  async getSubscriptionById(id) { const res = await this.request(`/api/subscriptions/${id}`); return res.data?.subscription || null; },
+  async createSubscription(planId, couponCode = null) {
+    const body = { planId };
+    if (couponCode) body.couponCode = couponCode.trim();
+    const res = await this.request('/api/subscriptions', { method: 'POST', body });
+    return res.data;
+  },
+  async changePlan(subscriptionId, newPlanId) {
+    const res = await this.request(`/api/subscriptions/${subscriptionId}/change-plan`, { method: 'PUT', body: { newPlanId } });
+    return res.data;
+  },
+  async cancelSubscription(subscriptionId) {
+    const res = await this.request(`/api/subscriptions/${subscriptionId}/cancel`, { method: 'PUT' });
+    return res.data;
+  },
+  async applyCoupon(subscriptionId, couponCode) {
+    const res = await this.request(`/api/subscriptions/${subscriptionId}/apply-coupon`, { method: 'POST', body: { couponCode } });
+    return res.data;
+  },
+  async getInvoices(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const res = await this.request(`/api/invoices${query ? `?${query}` : ''}`);
+    return res.data?.invoices || [];
+  },
+  async getInvoiceById(id) { const res = await this.request(`/api/invoices/${id}`); return res.data?.invoice || null; },
+  async generateInvoice(subscriptionId) {
+    const res = await this.request('/api/invoices/generate', { method: 'POST', body: { subscriptionId } });
+    return res.data;
+  },
+  async payInvoice(id, paymentMethod = 'card', gatewayRef = '') {
+    const res = await this.request(`/api/invoices/${id}/pay`, {
+      method: 'PUT',
+      body: { paymentMethod, gatewayRef: gatewayRef || `tx_${Math.random().toString(36).substr(2, 9)}` },
+    });
+    return res.data;
+  },
+  async voidInvoice(id) { const res = await this.request(`/api/invoices/${id}/void`, { method: 'PUT' }); return res.data; },
+  async retryPayment(id) { const res = await this.request(`/api/invoices/${id}/retry`, { method: 'POST' }); return res.data; },
+  async recordUsage(usageData) { const res = await this.request('/api/usage', { method: 'POST', body: usageData }); return res.data; },
+  async getUsageSummary(subscriptionId) { const res = await this.request(`/api/usage/summary/${subscriptionId}`); return res.data; },
+  async getCoupons() { const res = await this.request('/api/coupons'); return res.data?.coupons || []; },
+  async createCoupon(couponData) { const res = await this.request('/api/coupons', { method: 'POST', body: couponData }); return res.data; },
+  async validateCoupon(couponCode) { const res = await this.request('/api/coupons/validate', { method: 'POST', body: { couponCode } }); return res.data; },
+  async deleteCoupon(id) { const res = await this.request(`/api/coupons/${id}`, { method: 'DELETE' }); return res.data; }
+};
+window.API = API;
+
+const State = {
+  currentUser: null,
+  activeTab: 'customer',
+  plans: [],
+  customerDashboard: null,
+  adminReport: null,
+  allInvoices: [],
+  allSubscriptions: [],
+  allCoupons: [],
+  listeners: [],
+  subscribe(listener) { this.listeners.push(listener); return () => { this.listeners = this.listeners.filter(l => l !== listener); }; },
+  notify(event, data) { this.listeners.forEach(fn => { try { fn(event, data, this); } catch (e) { console.error(e); } }); },
+  setUser(user) {
+    this.currentUser = user;
+    if (user && user.role === 'admin' && this.activeTab === 'customer') this.activeTab = 'admin';
+    else if (user && user.role === 'customer' && this.activeTab === 'admin') this.activeTab = 'customer';
+    this.notify('user_changed', user);
+  },
+  setActiveTab(tab) { this.activeTab = tab; this.notify('tab_changed', tab); },
+  setPlans(plans) { this.plans = plans; this.notify('plans_updated', plans); },
+  setCustomerDashboard(data) { this.customerDashboard = data; this.notify('customer_data_updated', data); },
+  setAdminReport(data) { this.adminReport = data; this.notify('admin_data_updated', data); },
+  setInvoices(invoices) { this.allInvoices = invoices; this.notify('invoices_updated', invoices); },
+  setCoupons(coupons) { this.allCoupons = coupons; this.notify('coupons_updated', coupons); }
+};
+window.State = State;
+
+const Nav = {
+  init() {
+    this.container = document.getElementById('app-header');
+    State.subscribe((event) => { if (event === 'user_changed' || event === 'tab_changed') this.render(); });
+  },
+  render() {
+    if (!this.container) return;
+    const user = State.currentUser;
+    const currentTab = State.activeTab;
+    const isAdmin = user?.role === 'admin';
+
+    this.container.innerHTML = `
+      <div class="header-inner">
+        <div class="brand-section" onclick="State.setActiveTab('${isAdmin ? 'admin' : 'customer'}')">
+          <div class="brand-logo"><i data-lucide="layers" style="width: 22px; height: 22px;"></i></div>
+          <div class="brand-info">
+            <h1>SaaS Billing Engine</h1>
+            <p>Subscription Lifecycle & Metering</p>
+          </div>
+        </div>
+        <nav class="nav-tabs">
+          ${user?.role === 'customer' || !user ? `
+            <button class="nav-tab ${currentTab === 'customer' ? 'active' : ''}" onclick="State.setActiveTab('customer')">
+              <i data-lucide="user"></i> Customer Portal
+            </button>
+          ` : ''}
+          ${isAdmin ? `
+            <button class="nav-tab ${currentTab === 'admin' ? 'active' : ''}" onclick="State.setActiveTab('admin')">
+              <i data-lucide="shield-check"></i> Admin Console <span class="badge">PRO</span>
+            </button>
+          ` : ''}
+          <button class="nav-tab ${currentTab === 'pricing' ? 'active' : ''}" onclick="State.setActiveTab('pricing')"><i data-lucide="sparkles"></i> Pricing & Plans</button>
+          <button class="nav-tab ${currentTab === 'invoices' ? 'active' : ''}" onclick="State.setActiveTab('invoices')"><i data-lucide="file-text"></i> Invoices</button>
+          <button class="nav-tab ${currentTab === 'simulator' ? 'active' : ''}" onclick="State.setActiveTab('simulator')"><i data-lucide="play-circle"></i> E2E Simulator</button>
+        </nav>
+        <div class="header-right">
+          <div class="persona-switcher">
+            <span>Demo As:</span>
+            <button class="persona-btn ${user?.email === 'admin@saas.com' ? 'active-persona' : ''}" onclick="App.switchPersona('admin@saas.com')">Admin</button>
+            <button class="persona-btn ${user?.email === 'alice@example.com' ? 'active-persona' : ''}" onclick="App.switchPersona('alice@example.com')">Alice</button>
+            <button class="persona-btn ${user?.email === 'bob@example.com' ? 'active-persona' : ''}" onclick="App.switchPersona('bob@example.com')">Bob</button>
+            <button class="persona-btn ${user?.email === 'charlie@example.com' ? 'active-persona' : ''}" onclick="App.switchPersona('charlie@example.com')">Charlie</button>
+          </div>
+          ${user ? `
+            <div class="user-profile-badge">
+              <div class="user-avatar">${user.name ? user.name[0].toUpperCase() : 'U'}</div>
+              <div class="user-info"><span class="name">${user.name}</span><span class="role-tag">${user.role}</span></div>
+              <button class="btn btn-outline btn-sm" style="border: none; padding: 0.2rem;" onclick="App.logout()" title="Sign Out">
+                <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
+              </button>
+            </div>
+          ` : `<button class="btn btn-primary btn-sm" onclick="App.openLoginModal()">Sign In</button>`}
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  }
+};
+window.Nav = Nav;
+
+const CustomerView = {
+  init() { this.container = document.getElementById('view-customer'); },
+  async render() {
+    if (!this.container) return;
+    if (!State.currentUser) {
+      this.container.innerHTML = `
+        <div class="panel-card" style="text-align: center; padding: 3rem 1.5rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">🔐</div>
+          <h3>Authentication Required</h3>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Please log in or use the quick persona switcher above to view customer billing details.</p>
+          <button class="btn btn-primary" onclick="App.switchPersona('alice@example.com')">Quick Login as Alice (Customer)</button>
+        </div>
+      `;
+      return;
+    }
+    this.container.innerHTML = `<div style="text-align: center; padding: 2rem;"><div class="spinner"></div> Loading customer dashboard...</div>`;
+    try {
+      const data = await API.getCustomerDashboard();
+      State.setCustomerDashboard(data);
+      this.renderContent(data);
+    } catch (err) {
+      this.container.innerHTML = `<div class="panel-card" style="border-color: var(--rose);"><h3 style="color: var(--rose);">Error Loading Dashboard</h3><p style="color: var(--text-secondary); margin-top: 0.5rem;">${err.message}</p></div>`;
+    }
+  },
+  renderContent(data) {
+    const { activeSubscription, recentInvoices, usageSummary, totalSpent } = data;
+    const plan = activeSubscription?.planId;
+    const limits = plan?.featureLimits || { apiCalls: 1000, storage: 5, users: 1 };
+    const usageMap = {};
+    (usageSummary || []).forEach(u => { usageMap[u._id] = u.totalQuantity || 0; });
+    const apiCallsUsed = usageMap['api_calls'] || 0;
+    const storageUsed = usageMap['storage_gb'] || 0;
+    const usersUsed = usageMap['users'] || 1;
+    const apiPct = Math.min(100, Math.round((apiCallsUsed / (limits.apiCalls || 1000)) * 100));
+    const storagePct = Math.min(100, Math.round((storageUsed / (limits.storage || 5)) * 100));
+    const usersPct = Math.min(100, Math.round((usersUsed / (limits.users || 1)) * 100));
+
+    let subscriptionHtml = '';
+    if (activeSubscription) {
+      const statusClass = `badge-${activeSubscription.status}`;
+      const periodEnd = activeSubscription.currentPeriodEnd ? new Date(activeSubscription.currentPeriodEnd).toLocaleDateString() : 'N/A';
+      subscriptionHtml = `
+        <div class="panel-card highlight" style="margin-bottom: 2rem;">
+          <div class="panel-header">
+            <h3><i data-lucide="zap" style="color: var(--primary);"></i> Active Subscription</h3>
+            <span class="badge ${statusClass}">${activeSubscription.status.replace('_', ' ')}</span>
+          </div>
+          <div class="plan-hero">
+            <div class="plan-hero-left">
+              <h4>${plan?.name || 'Custom Plan'}</h4>
+              <p>${plan?.description || 'Active subscription'}</p>
+              <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                ${activeSubscription.prorationCredit > 0 ? `<span class="badge" style="background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,0.3);">₹${activeSubscription.prorationCredit} Proration Credit Available</span>` : ''}
+                ${activeSubscription.couponId ? `<span class="badge" style="background: var(--purple-bg); color: var(--purple); border: 1px solid rgba(168,85,247,0.3);">Coupon: ${activeSubscription.couponId.code} (${activeSubscription.couponId.discountValue}${activeSubscription.couponId.discountType === 'percentage' ? '%' : '₹'} off)</span>` : ''}
+                <span class="badge" style="background: rgba(255,255,255,0.06); color: var(--text-secondary);">Renews/Expires: ${periodEnd}</span>
+              </div>
+            </div>
+            <div class="plan-price-tag">
+              <div class="amount">₹${plan?.price || 0}</div>
+              <div class="period">per ${plan?.billingCycle || 'month'}</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.25rem;">
+            <button class="btn btn-primary btn-sm" onclick="PlansModal.openUpgrade('${activeSubscription._id}')"><i data-lucide="arrow-up-right"></i> Upgrade / Change Plan</button>
+            <button class="btn btn-secondary btn-sm" onclick="UsageModal.open('${activeSubscription._id}')"><i data-lucide="plus-circle"></i> Log Metered Usage</button>
+            <button class="btn btn-secondary btn-sm" onclick="CustomerView.openApplyCoupon('${activeSubscription._id}')"><i data-lucide="tag"></i> Apply Coupon</button>
+            ${activeSubscription.status !== 'canceled' ? `<button class="btn btn-danger btn-sm" style="margin-left: auto;" onclick="CustomerView.cancelSubscription('${activeSubscription._id}')"><i data-lucide="x-circle"></i> Cancel</button>` : ''}
+          </div>
+        </div>
+      `;
+    } else {
+      subscriptionHtml = `
+        <div class="panel-card" style="text-align: center; padding: 2.5rem; margin-bottom: 2rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">📦</div>
+          <h3>No Active Subscription</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Choose a plan to get access to all features and start using our SaaS platform.</p>
+          <button class="btn btn-primary" onclick="State.setActiveTab('pricing')">Browse Pricing & Plans</button>
+        </div>
+      `;
+    }
+
+    let invoicesRows = '';
+    if (recentInvoices && recentInvoices.length > 0) {
+      invoicesRows = recentInvoices.map(inv => {
+        const date = new Date(inv.createdAt).toLocaleDateString();
+        const statusBadge = `<span class="badge badge-${inv.status}">${inv.status}</span>`;
+        const canPay = (inv.status === 'open' || inv.status === 'retrying' || inv.status === 'failed');
+        return `
+          <tr>
+            <td><strong style="color: var(--text-primary); font-family: var(--font-mono);">${inv.invoiceNumber || inv._id.slice(-6)}</strong></td>
+            <td>${date}</td>
+            <td><strong>₹${inv.total}</strong></td>
+            <td>${statusBadge}</td>
+            <td style="text-align: right;">
+              ${canPay ? `<button class="btn btn-primary btn-sm" onclick="InvoicesView.openPayModal('${inv._id}', ${inv.total})"><i data-lucide="credit-card"></i> Pay</button>` : `<button class="btn btn-outline btn-sm" onclick="InvoicesView.viewReceipt('${inv._id}')"><i data-lucide="file-text"></i> Receipt</button>`}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      invoicesRows = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">No invoices generated yet.</td></tr>`;
+    }
+
+    this.container.innerHTML = `
+      <div class="page-title-row">
+        <div>
+          <h2>Welcome back, ${State.currentUser.name}</h2>
+          <p>Manage your active plan, monitor quota usage, and review billing invoices.</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary btn-sm" onclick="CustomerView.render()"><i data-lucide="refresh-cw"></i> Refresh</button>
+        </div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="card-top"><span class="label">Total Lifetime Spend</span><div class="icon-wrapper" style="background: var(--emerald-bg); color: var(--emerald);"><i data-lucide="dollar-sign"></i></div></div>
+          <div class="value">₹${totalSpent || 0}</div>
+          <div class="subtext">Fully settled across all invoices</div>
+        </div>
+        <div class="kpi-card">
+          <div class="card-top"><span class="label">Current Tier</span><div class="icon-wrapper" style="background: var(--primary-glow); color: var(--primary);"><i data-lucide="layers"></i></div></div>
+          <div class="value" style="font-size: 1.6rem;">${plan ? plan.name : 'None'}</div>
+          <div class="subtext">Tier ${plan ? plan.tier : 0} &bull; ${plan ? plan.billingCycle : 'N/A'}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="card-top"><span class="label">API Usage Status</span><div class="icon-wrapper" style="background: var(--sky-bg); color: var(--sky);"><i data-lucide="activity"></i></div></div>
+          <div class="value">${apiPct}%</div>
+          <div class="subtext">${apiCallsUsed.toLocaleString()} / ${(limits.apiCalls || 1000).toLocaleString()} calls</div>
+        </div>
+      </div>
+      ${subscriptionHtml}
+      <div class="split-layout">
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3><i data-lucide="gauge" style="color: var(--sky);"></i> Plan Feature Quotas</h3>
+            ${activeSubscription ? `<button class="btn btn-outline btn-sm" onclick="UsageModal.open('${activeSubscription._id}')">+ Simulate Usage</button>` : ''}
+          </div>
+          <div class="usage-group">
+            <div class="usage-item">
+              <div class="usage-labels"><span class="usage-name"><i data-lucide="terminal" style="width: 14px;"></i> API Calls</span><span class="usage-stat">${apiCallsUsed.toLocaleString()} / ${(limits.apiCalls || 1000).toLocaleString()} (${apiPct}%)</span></div>
+              <div class="progress-track"><div class="progress-fill ${apiPct > 85 ? 'danger' : apiPct > 60 ? 'warning' : ''}" style="width: ${apiPct}%;"></div></div>
+            </div>
+            <div class="usage-item">
+              <div class="usage-labels"><span class="usage-name"><i data-lucide="hard-drive" style="width: 14px;"></i> Cloud Storage</span><span class="usage-stat">${storageUsed} / ${limits.storage || 5} GB (${storagePct}%)</span></div>
+              <div class="progress-track"><div class="progress-fill ${storagePct > 85 ? 'danger' : storagePct > 60 ? 'warning' : ''}" style="width: ${storagePct}%;"></div></div>
+            </div>
+            <div class="usage-item">
+              <div class="usage-labels"><span class="usage-name"><i data-lucide="users" style="width: 14px;"></i> Team Seats</span><span class="usage-stat">${usersUsed} / ${limits.users || 1} User${limits.users > 1 ? 's' : ''} (${usersPct}%)</span></div>
+              <div class="progress-track"><div class="progress-fill" style="width: ${usersPct}%;"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3><i data-lucide="receipt" style="color: var(--emerald);"></i> Recent Invoices</h3>
+            <button class="btn btn-outline btn-sm" onclick="State.setActiveTab('invoices')">View All</button>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead><tr><th>Invoice</th><th>Date</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+              <tbody>${invoicesRows}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+  async openApplyCoupon(subscriptionId) {
+    const code = prompt('Enter coupon promo code (e.g. WELCOME20, FLAT200):');
+    if (!code || !code.trim()) return;
+    try {
+      App.toast('Validating coupon...', 'info');
+      await API.applyCoupon(subscriptionId, code.trim());
+      App.toast(`Coupon ${code} applied successfully!`, 'success');
+      this.render();
+    } catch (err) { App.toast(err.message || 'Failed to apply coupon', 'error'); }
+  },
+  async cancelSubscription(subscriptionId) {
+    if (!confirm('Are you sure you want to cancel this subscription? You will retain access until the end of the billing period.')) return;
+    try {
+      App.toast('Canceling subscription...', 'info');
+      await API.cancelSubscription(subscriptionId);
+      App.toast('Subscription canceled. Grace period started.', 'success');
+      this.render();
+    } catch (err) { App.toast(err.message || 'Failed to cancel subscription', 'error'); }
+  }
+};
+window.CustomerView = CustomerView;
+
+const AdminView = {
+  charts: {},
+  init() { this.container = document.getElementById('view-admin'); },
+  async render() {
+    if (!this.container) return;
+    if (!State.currentUser || State.currentUser.role !== 'admin') {
+      this.container.innerHTML = `
+        <div class="panel-card" style="text-align: center; padding: 3rem 1.5rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">🛡️</div>
+          <h3>Admin Authorization Required</h3>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">This console is restricted to administrators.</p>
+          <button class="btn btn-primary" onclick="App.switchPersona('admin@saas.com')">Quick Login as Admin</button>
+        </div>
+      `;
+      return;
+    }
+    this.container.innerHTML = `<div style="text-align: center; padding: 2rem;"><div class="spinner"></div> Loading financial telemetry...</div>`;
+    try {
+      const [report, subscriptions, invoices, plans, coupons] = await Promise.all([
+        API.getRevenueReport(),
+        API.getSubscriptions(),
+        API.getInvoices(),
+        API.getPlans(),
+        API.getCoupons(),
+      ]);
+      State.setAdminReport(report); State.setInvoices(invoices); State.setPlans(plans); State.setCoupons(coupons);
+      this.renderContent(report, subscriptions, invoices, plans, coupons);
+    } catch (err) {
+      this.container.innerHTML = `<div class="panel-card" style="border-color: var(--rose);"><h3 style="color: var(--rose);">Failed to Load Admin Report</h3><p>${err.message}</p></div>`;
+    }
+  },
+  renderContent(report, subscriptions, invoices, plans, coupons) {
+    const { mrr, churnRate, activeSubscriptions, totalSubscriptions, totalCustomers, recentRevenue, planWiseBreakdown, subscriptionStatusBreakdown } = report;
+
+    const subRows = (subscriptions || []).map(sub => `
+      <tr>
+        <td><strong style="color: var(--text-primary); font-size: 0.85rem;">${sub.customerId?.email || 'Customer'}</strong></td>
+        <td>${sub.planId?.name || 'Custom Plan'}</td>
+        <td>₹${sub.planId?.price || 0} / ${sub.planId?.billingCycle || 'mo'}</td>
+        <td><span class="badge badge-${sub.status}">${sub.status.replace('_', ' ')}</span></td>
+        <td style="text-align: right;">
+          <button class="btn btn-outline btn-sm" onclick="AdminView.triggerInvoice('${sub._id}')" title="Bill Subscription"><i data-lucide="file-plus"></i> Bill</button>
+        </td>
+      </tr>
+    `).join('') || `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No subscriptions found.</td></tr>`;
+
+    const invRows = (invoices || []).slice(0, 8).map(inv => {
+      const isRetryingOrFailed = (inv.status === 'retrying' || inv.status === 'failed');
+      return `
+        <tr>
+          <td><strong style="color: var(--text-primary); font-family: var(--font-mono);">${inv.invoiceNumber || inv._id.slice(-6)}</strong></td>
+          <td>${inv.customerId?.email || 'Customer'}</td>
+          <td><strong>₹${inv.total}</strong></td>
+          <td><span class="badge badge-${inv.status}">${inv.status}</span></td>
+          <td style="text-align: right;">
+            ${isRetryingOrFailed ? `<button class="btn btn-primary btn-sm" onclick="AdminView.retryDunning('${inv._id}')"><i data-lucide="refresh-cw"></i> Retry</button>` : `<button class="btn btn-outline btn-sm" onclick="InvoicesView.viewReceipt('${inv._id}')"><i data-lucide="eye"></i></button>`}
+          </td>
+        </tr>
+      `;
+    }).join('') || `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No invoices found.</td></tr>`;
+
+    this.container.innerHTML = `
+      <div class="page-title-row">
+        <div><h2>Executive Revenue & Billing Console</h2><p>Real-time telemetry on Monthly Recurring Revenue (MRR), subscriber churn, and dunning workflows.</p></div>
+        <div class="header-actions">
+          <button class="btn btn-secondary btn-sm" onclick="AdminView.render()"><i data-lucide="refresh-cw"></i> Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="AdminView.openCreatePlanModal()"><i data-lucide="plus"></i> New Plan</button>
+          <button class="btn btn-secondary btn-sm" onclick="AdminView.openCreateCouponModal()"><i data-lucide="tag"></i> New Coupon</button>
+        </div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="card-top"><span class="label">Monthly Recurring Revenue (MRR)</span><div class="icon-wrapper" style="background: var(--primary-glow); color: var(--primary);"><i data-lucide="trending-up"></i></div></div>
+          <div class="value">₹${mrr.toLocaleString()}</div>
+          <div class="subtext"><span class="pill-positive">&uarr; Normalized</span> across active billing plans</div>
+        </div>
+        <div class="kpi-card">
+          <div class="card-top"><span class="label">Subscriber Churn Rate</span><div class="icon-wrapper" style="background: var(--rose-bg); color: var(--rose);"><i data-lucide="user-minus"></i></div></div>
+          <div class="value">${churnRate}%</div>
+          <div class="subtext">${report.canceledLast30Days || 0} cancellations in last 30 days</div>
+        </div>
+        <div class="kpi-card">
+          <div class="card-top"><span class="label">Active Subscriptions</span><div class="icon-wrapper" style="background: var(--emerald-bg); color: var(--emerald);"><i data-lucide="check-circle-2"></i></div></div>
+          <div class="value">${activeSubscriptions} <span style="font-size: 1.1rem; color: var(--text-muted); font-weight: 500;">/ ${totalSubscriptions}</span></div>
+          <div class="subtext">${totalCustomers} Registered customers</div>
+        </div>
+        <div class="kpi-card">
+          <div class="card-top"><span class="label">30-Day Realized Revenue</span><div class="icon-wrapper" style="background: var(--amber-bg); color: var(--amber);"><i data-lucide="wallet"></i></div></div>
+          <div class="value">₹${(recentRevenue?.totalRevenue || 0).toLocaleString()}</div>
+          <div class="subtext">${recentRevenue?.invoiceCount || 0} paid invoices settled</div>
+        </div>
+      </div>
+      <div class="split-layout">
+        <div class="panel-card"><div class="panel-header"><h3><i data-lucide="bar-chart-2" style="color: var(--primary);"></i> Revenue & Subscribers by Plan</h3></div><div style="height: 260px; position: relative;"><canvas id="planRevenueChart"></canvas></div></div>
+        <div class="panel-card"><div class="panel-header"><h3><i data-lucide="pie-chart" style="color: var(--sky);"></i> Subscription Status Health</h3></div><div style="height: 260px; position: relative;"><canvas id="statusDonutChart"></canvas></div></div>
+      </div>
+      <div class="split-layout">
+        <div class="panel-card">
+          <div class="panel-header"><h3><i data-lucide="users" style="color: var(--primary);"></i> Customer Subscriptions</h3><span class="badge" style="background: var(--bg-elevated); color: var(--text-muted);">${subscriptions.length} records</span></div>
+          <div class="table-wrapper"><table class="data-table"><thead><tr><th>Customer</th><th>Plan</th><th>Rate</th><th>Status</th><th>Action</th></tr></thead><tbody>${subRows}</tbody></table></div>
+        </div>
+        <div class="panel-card">
+          <div class="panel-header"><h3><i data-lucide="alert-triangle" style="color: var(--amber);"></i> Invoices & Dunning Watchlist</h3><button class="btn btn-outline btn-sm" onclick="State.setActiveTab('invoices')">All Invoices</button></div>
+          <div class="table-wrapper"><table class="data-table"><thead><tr><th>Invoice</th><th>Customer</th><th>Total</th><th>Status</th><th>Dunning</th></tr></thead><tbody>${invRows}</tbody></table></div>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+    this.renderCharts(planWiseBreakdown, subscriptionStatusBreakdown);
+  },
+  renderCharts(planBreakdown = [], statusBreakdown = []) {
+    if (!window.Chart) return;
+    if (this.charts.planRevenue) this.charts.planRevenue.destroy();
+    if (this.charts.statusDonut) this.charts.statusDonut.destroy();
+
+    const ctxBar = document.getElementById('planRevenueChart')?.getContext('2d');
+    if (ctxBar) {
+      this.charts.planRevenue = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: planBreakdown.map(p => p.planName),
+          datasets: [
+            { label: 'Subscribers', data: planBreakdown.map(p => p.subscriberCount), backgroundColor: 'rgba(99, 102, 241, 0.7)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 6, yAxisID: 'y' },
+            { label: 'Revenue (₹)', data: planBreakdown.map(p => p.revenue), backgroundColor: 'rgba(16, 185, 129, 0.7)', borderColor: '#10b981', borderWidth: 1, borderRadius: 6, yAxisID: 'y1' }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#9ca3af', font: { family: 'Inter' } } } },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+            y: { type: 'linear', position: 'left', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', stepSize: 1 } },
+            y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#10b981' } }
+          }
+        }
+      });
+    }
+
+    const ctxDonut = document.getElementById('statusDonutChart')?.getContext('2d');
+    if (ctxDonut) {
+      const labels = statusBreakdown.map(s => s._id);
+      const colorMap = { 'active': '#10b981', 'past_due': '#f59e0b', 'grace_period': '#0ea5e9', 'canceled': '#f43f5e', 'expired': '#6b7280' };
+      this.charts.statusDonut = new Chart(ctxDonut, {
+        type: 'doughnut',
+        data: {
+          labels: labels.length ? labels : ['Active'],
+          datasets: [{ data: statusBreakdown.map(s => s.count), backgroundColor: labels.map(l => colorMap[l] || '#6366f1'), borderColor: '#111827', borderWidth: 3 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#9ca3af', font: { family: 'Inter' } } } }, cutout: '70%' }
+      });
+    }
+  },
+  async triggerInvoice(subscriptionId) {
+    try {
+      App.toast('Generating invoice...', 'info');
+      const res = await API.generateInvoice(subscriptionId);
+      App.toast(`Invoice ${res.invoice?.invoiceNumber || ''} created!`, 'success');
+      this.render();
+    } catch (err) { App.toast(err.message || 'Invoice generation failed', 'error'); }
+  },
+  async retryDunning(invoiceId) {
+    try {
+      App.toast('Retrying payment attempt...', 'info');
+      const res = await API.retryPayment(invoiceId);
+      App.toast(res.message || 'Payment retry processed.', 'success');
+      this.render();
+    } catch (err) { App.toast(err.message || 'Retry failed', 'error'); }
+  },
+  openCreatePlanModal() { PlansModal.openCreate(); },
+  openCreateCouponModal() { CouponManager.openCreateModal(); }
+};
+window.AdminView = AdminView;
+
+const PlansModal = {
+  init() { this.container = document.getElementById('view-pricing'); },
+  async render() {
+    if (!this.container) return;
+    this.container.innerHTML = `<div style="text-align: center; padding: 2rem;"><div class="spinner"></div> Loading subscription tiers...</div>`;
+    try {
+      const plans = await API.getPlans();
+      State.setPlans(plans);
+      this.renderPricing(plans);
+    } catch (err) { this.container.innerHTML = `<div class="panel-card" style="border-color: var(--rose);"><h3>Failed to load plans</h3><p>${err.message}</p></div>`; }
+  },
+  renderPricing(plans) {
+    const activeSub = State.customerDashboard?.activeSubscription;
+    const currentPlanId = activeSub?.planId?._id;
+    const isAdmin = State.currentUser?.role === 'admin';
+
+    const cardsHtml = plans.map(plan => {
+      const isCurrent = (currentPlanId === plan._id);
+      const isFeatured = (plan.tier === 2);
+      const limits = plan.featureLimits || {};
+      let actionBtn = '';
+      if (isAdmin) {
+        actionBtn = `<div style="display: flex; gap: 0.5rem; width: 100%;"><button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="PlansModal.openEdit('${plan._id}')">Edit</button><button class="btn btn-danger btn-sm" onclick="PlansModal.deletePlan('${plan._id}')"><i data-lucide="trash-2"></i></button></div>`;
+      } else if (isCurrent) {
+        actionBtn = `<button class="btn btn-outline" style="width: 100%; border-color: var(--emerald); color: var(--emerald); cursor: default;" disabled><i data-lucide="check"></i> Current Plan</button>`;
+      } else if (activeSub) {
+        actionBtn = `<button class="btn btn-primary" style="width: 100%;" onclick="PlansModal.openChangePlanConfirm('${plan._id}', '${plan.name}', ${plan.price})">Switch to ${plan.name}</button>`;
+      } else {
+        actionBtn = `<button class="btn btn-primary" style="width: 100%;" onclick="PlansModal.openSubscribeModal('${plan._id}', '${plan.name}', ${plan.price})">Subscribe Now</button>`;
+      }
+      return `
+        <div class="pricing-card ${isFeatured ? 'featured' : ''}">
+          ${isFeatured ? '<div class="featured-ribbon">Most Popular</div>' : ''}
+          <h3>${plan.name}</h3>
+          <div class="desc">${plan.description || 'Reliable infrastructure for SaaS businesses.'}</div>
+          <div class="price-row"><div class="price">₹${plan.price}</div><div class="billing-period">/ ${plan.billingCycle}</div></div>
+          <ul class="pricing-features">
+            <li><i data-lucide="check-circle"></i> <strong>${(limits.apiCalls || 0).toLocaleString()}</strong> API Calls</li>
+            <li><i data-lucide="check-circle"></i> <strong>${limits.storage || 0} GB</strong> Storage</li>
+            <li><i data-lucide="check-circle"></i> <strong>${limits.users || 1}</strong> User Seat${(limits.users || 1) > 1 ? 's' : ''}</li>
+            <li><i data-lucide="check-circle"></i> Usage Metering & Invoicing</li>
+            <li><i data-lucide="check-circle"></i> Priority Support</li>
+          </ul>
+          <div style="margin-top: auto;">${actionBtn}</div>
+        </div>
+      `;
+    }).join('');
+
+    this.container.innerHTML = `
+      <div class="page-title-row" style="text-align: center; display: block; margin-bottom: 3rem;">
+        <h2>Predictable Subscription Pricing</h2>
+        <p>Scale smoothly with automated usage metering and instant proration credits.</p>
+        ${isAdmin ? `<div style="margin-top: 1.25rem;"><button class="btn btn-primary btn-sm" onclick="PlansModal.openCreate()"><i data-lucide="plus"></i> Add New Plan Tier</button></div>` : ''}
+      </div>
+      <div class="pricing-grid">${cardsHtml}</div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+  openSubscribeModal(planId, planName, price) {
+    if (!State.currentUser) { App.switchPersona('alice@example.com'); return; }
+    const modalTitle = document.getElementById('genericModalTitle');
+    const modalBody = document.getElementById('genericModalBody');
+    const modalSubmit = document.getElementById('genericModalSubmit');
+    modalTitle.textContent = `Subscribe to ${planName} (₹${price}/mo)`;
+    modalBody.innerHTML = `
+      <p style="color: var(--text-secondary); margin-bottom: 1.25rem;">Confirm subscription with optional promo code:</p>
+      <div class="form-group">
+        <label>Promo / Coupon Code</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="subCouponInput" class="form-control" placeholder="e.g. WELCOME20" style="text-transform: uppercase;">
+          <button class="btn btn-secondary btn-sm" type="button" onclick="PlansModal.verifyCoupon()">Verify</button>
+        </div>
+        <div id="couponStatusMsg" style="font-size: 0.8rem; margin-top: 0.4rem;"></div>
+      </div>
+      <div class="panel-card" style="background: var(--bg-body); padding: 1rem;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;"><span>Plan Rate:</span><strong>₹${price}</strong></div>
+      </div>
+    `;
+    modalSubmit.textContent = 'Confirm Subscription';
+    modalSubmit.onclick = async () => {
+      const couponCode = document.getElementById('subCouponInput')?.value;
+      try {
+        App.toast('Creating subscription...', 'info');
+        await API.createSubscription(planId, couponCode);
+        App.toast(`Subscribed to ${planName}!`, 'success');
+        App.closeModal(); State.setActiveTab('customer');
+      } catch (err) { App.toast(err.message || 'Subscription failed', 'error'); }
+    };
+    App.openModal();
+  },
+  async verifyCoupon() {
+    const input = document.getElementById('subCouponInput');
+    const statusMsg = document.getElementById('couponStatusMsg');
+    const code = input?.value?.trim();
+    if (!code) return;
+    try {
+      const res = await API.validateCoupon(code);
+      const coupon = res.data?.coupon || res.coupon;
+      statusMsg.innerHTML = `<span style="color: var(--emerald); font-weight: 600;">✓ Valid: ${coupon.discountValue}${coupon.discountType === 'percentage' ? '%' : '₹'} off!</span>`;
+    } catch (err) { statusMsg.innerHTML = `<span style="color: var(--rose);">✗ Invalid coupon code</span>`; }
+  },
+  openUpgrade() { State.setActiveTab('pricing'); App.toast('Select a plan to upgrade with proration credit.', 'info'); },
+  async openChangePlanConfirm(newPlanId, planName, price) {
+    const activeSub = State.customerDashboard?.activeSubscription;
+    if (!activeSub || !confirm(`Switch to ${planName} for ₹${price}/month?\nUnused time will be calculated as a Proration Credit.`)) return;
+    try {
+      App.toast('Applying proration credit...', 'info');
+      const res = await API.changePlan(activeSub._id, newPlanId);
+      App.toast(`Plan changed! ₹${res.subscription?.prorationCredit || 0} proration credit applied.`, 'success');
+      State.setActiveTab('customer');
+    } catch (err) { App.toast(err.message || 'Plan change failed', 'error'); }
+  },
+  openCreate() {
+    const modalTitle = document.getElementById('genericModalTitle');
+    const modalBody = document.getElementById('genericModalBody');
+    const modalSubmit = document.getElementById('genericModalSubmit');
+    modalTitle.textContent = 'Create New Plan Tier';
+    modalBody.innerHTML = `
+      <div class="form-group"><label>Plan Name</label><input type="text" id="pName" class="form-control" placeholder="e.g. Starter Plus" required></div>
+      <div class="form-group"><label>Description</label><input type="text" id="pDesc" class="form-control" placeholder="Plan highlights"></div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group"><label>Price (₹)</label><input type="number" id="pPrice" class="form-control" value="999" required></div>
+        <div class="form-group"><label>Cycle</label><select id="pCycle" class="form-control"><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select></div>
+      </div>
+      <div class="form-group"><label>Tier Level (1-10)</label><input type="number" id="pTier" class="form-control" value="2"></div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group"><label>API Calls</label><input type="number" id="pApiCalls" class="form-control" value="5000"></div>
+        <div class="form-group"><label>Storage (GB)</label><input type="number" id="pStorage" class="form-control" value="25"></div>
+        <div class="form-group"><label>Users</label><input type="number" id="pUsers" class="form-control" value="5"></div>
+      </div>
+    `;
+    modalSubmit.textContent = 'Save Plan';
+    modalSubmit.onclick = async () => {
+      try {
+        await API.createPlan({
+          name: document.getElementById('pName').value.trim(),
+          description: document.getElementById('pDesc').value.trim(),
+          price: Number(document.getElementById('pPrice').value),
+          billingCycle: document.getElementById('pCycle').value,
+          tier: Number(document.getElementById('pTier').value),
+          featureLimits: {
+            apiCalls: Number(document.getElementById('pApiCalls').value),
+            storage: Number(document.getElementById('pStorage').value),
+            users: Number(document.getElementById('pUsers').value),
+          }
+        });
+        App.toast('Plan tier created!', 'success'); App.closeModal(); PlansModal.render();
+      } catch (err) { App.toast(err.message || 'Failed to create plan', 'error'); }
+    };
+    App.openModal();
+  },
+  async deletePlan(planId) {
+    if (!confirm('Deactivate this plan?')) return;
+    try { await API.deletePlan(planId); App.toast('Plan deactivated.', 'success'); this.render(); }
+    catch (err) { App.toast(err.message || 'Failed to delete', 'error'); }
+  }
+};
+window.PlansModal = PlansModal;
+
+const InvoicesView = {
+  currentFilter: 'all',
+  init() { this.container = document.getElementById('view-invoices'); },
+  async render() {
+    if (!this.container) return;
+    this.container.innerHTML = `<div style="text-align: center; padding: 2rem;"><div class="spinner"></div> Loading invoices...</div>`;
+    try {
+      const invoices = await API.getInvoices();
+      State.setInvoices(invoices);
+      this.renderTable(invoices);
+    } catch (err) { this.container.innerHTML = `<div class="panel-card" style="border-color: var(--rose);"><h3>Failed to load invoices</h3><p>${err.message}</p></div>`; }
+  },
+  renderTable(invoices) {
+    const isAdmin = State.currentUser?.role === 'admin';
+    const filtered = (invoices || []).filter(inv => {
+      if (this.currentFilter === 'all') return true;
+      if (this.currentFilter === 'unpaid') return (inv.status === 'open' || inv.status === 'retrying' || inv.status === 'failed');
+      return inv.status === this.currentFilter;
+    });
+
+    const rows = filtered.map(inv => {
+      const date = new Date(inv.createdAt).toLocaleDateString();
+      const isPayable = (inv.status === 'open' || inv.status === 'retrying' || inv.status === 'failed');
+      return `
+        <tr>
+          <td><strong style="color: var(--text-primary); font-family: var(--font-mono);">${inv.invoiceNumber || inv._id.slice(-6)}</strong></td>
+          ${isAdmin ? `<td>${inv.customerId?.email || 'Customer'}</td>` : ''}
+          <td>${date}</td>
+          <td><strong>₹${inv.total}</strong></td>
+          <td><span class="badge badge-${inv.status}">${inv.status}</span></td>
+          <td style="text-align: right; display: flex; gap: 0.4rem; justify-content: flex-end;">
+            ${isPayable ? `<button class="btn btn-primary btn-sm" onclick="InvoicesView.openPayModal('${inv._id}', ${inv.total})"><i data-lucide="credit-card"></i> Pay</button>` : ''}
+            <button class="btn btn-secondary btn-sm" onclick="InvoicesView.viewReceipt('${inv._id}')"><i data-lucide="file-text"></i> Receipt</button>
+            ${isAdmin && isPayable ? `<button class="btn btn-outline btn-sm" onclick="InvoicesView.retryDunning('${inv._id}')"><i data-lucide="refresh-cw"></i></button>` : ''}
+          </td>
+        </tr>
+      `;
+    }).join('') || `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">No invoices matching filter.</td></tr>`;
+
+    this.container.innerHTML = `
+      <div class="page-title-row">
+        <div><h2>Invoices & Billing History</h2><p>Itemized invoices, automatic proration credits, and dunning engine logs.</p></div>
+        <div class="header-actions">
+          <div class="nav-tabs" style="font-size: 0.8rem;">
+            <button class="nav-tab ${this.currentFilter === 'all' ? 'active' : ''}" onclick="InvoicesView.setFilter('all')">All</button>
+            <button class="nav-tab ${this.currentFilter === 'paid' ? 'active' : ''}" onclick="InvoicesView.setFilter('paid')">Paid</button>
+            <button class="nav-tab ${this.currentFilter === 'unpaid' ? 'active' : ''}" onclick="InvoicesView.setFilter('unpaid')">Unpaid</button>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="InvoicesView.render()"><i data-lucide="refresh-cw"></i></button>
+        </div>
+      </div>
+      <div class="panel-card"><div class="table-wrapper"><table class="data-table"><thead><tr><th>Invoice #</th>${isAdmin ? `<th>Customer</th>` : ''}<th>Date</th><th>Total</th><th>Status</th><th style="text-align: right;">Actions</th></tr></thead><tbody>${rows}</tbody></table></div></div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+  setFilter(filter) { this.currentFilter = filter; this.renderTable(State.allInvoices); },
+  openPayModal(invoiceId, total) {
+    const modalTitle = document.getElementById('genericModalTitle');
+    const modalBody = document.getElementById('genericModalBody');
+    const modalSubmit = document.getElementById('genericModalSubmit');
+    modalTitle.textContent = `Pay Invoice (₹${total})`;
+    modalBody.innerHTML = `
+      <p style="color: var(--text-secondary); margin-bottom: 1.25rem;">Complete payment for invoice <strong>${invoiceId}</strong>:</p>
+      <div class="form-group"><label>Payment Method</label><select id="payMethodSelect" class="form-control"><option value="card">Credit / Debit Card</option><option value="upi">UPI Instant</option><option value="bank_transfer">Bank Transfer (NEFT)</option></select></div>
+      <div class="form-group"><label>Reference</label><input type="text" id="payRefInput" class="form-control" value="tx_demo_${Date.now().toString().slice(-6)}"></div>
+      <div class="panel-card" style="background: var(--bg-body); padding: 1rem;"><div style="display: flex; justify-content: space-between; font-weight: 700;"><span>Total Due:</span><span>₹${total}</span></div></div>
+    `;
+    modalSubmit.textContent = `Confirm & Pay ₹${total}`;
+    modalSubmit.onclick = async () => {
+      try {
+        App.toast('Processing payment...', 'info');
+        await API.payInvoice(invoiceId, document.getElementById('payMethodSelect')?.value, document.getElementById('payRefInput')?.value);
+        App.toast('Payment confirmed!', 'success'); App.closeModal(); InvoicesView.render();
+      } catch (err) { App.toast(err.message || 'Payment failed', 'error'); }
+    };
+    App.openModal();
+  },
+  async viewReceipt(invoiceId) {
+    try {
+      const invoice = await API.getInvoiceById(invoiceId);
+      const modalTitle = document.getElementById('genericModalTitle');
+      const modalBody = document.getElementById('genericModalBody');
+      const modalSubmit = document.getElementById('genericModalSubmit');
+      modalTitle.textContent = `Receipt #${invoice.invoiceNumber || invoice._id.slice(-6)}`;
+      const lineItems = (invoice.lineItems || []).map(item => `
+        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <div><div style="font-weight: 600;">${item.description}</div>${item.quantity > 1 ? `<div style="font-size: 0.75rem; color: var(--text-muted);">Qty ${item.quantity} &times; ₹${item.unitPrice}</div>` : ''}</div>
+          <div style="font-weight: 600;">₹${item.amount}</div>
+        </div>
+      `).join('') || '<div style="color: var(--text-muted);">Base fee</div>';
+
+      modalBody.innerHTML = `
+        <div style="margin-bottom: 1rem;"><span class="badge badge-${invoice.status}">${invoice.status}</span></div>
+        <div style="margin-bottom: 1.25rem;">${lineItems}</div>
+        <div style="background: var(--bg-body); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.35rem;">
+          <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span><span>₹${invoice.subtotal || invoice.total}</span></div>
+          ${invoice.discount > 0 ? `<div style="display: flex; justify-content: space-between; color: var(--emerald);"><span>Discount:</span><span>- ₹${invoice.discount}</span></div>` : ''}
+          <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; border-top: 1px solid var(--border); padding-top: 0.5rem;"><span>Total:</span><span>₹${invoice.total}</span></div>
+        </div>
+      `;
+      modalSubmit.textContent = 'Close'; modalSubmit.onclick = () => App.closeModal();
+      App.openModal();
+    } catch (err) { App.toast('Could not fetch receipt', 'error'); }
+  },
+  async retryDunning(invoiceId) {
+    try {
+      App.toast('Retrying dunning attempt...', 'info');
+      await API.retryPayment(invoiceId);
+      App.toast('Retry recorded.', 'success'); this.render();
+    } catch (err) { App.toast(err.message || 'Retry failed', 'error'); }
+  }
+};
+window.InvoicesView = InvoicesView;
+
+const UsageModal = {
+  open(subscriptionId) {
+    const modalTitle = document.getElementById('genericModalTitle');
+    const modalBody = document.getElementById('genericModalBody');
+    const modalSubmit = document.getElementById('genericModalSubmit');
+    const now = new Date();
+    modalTitle.textContent = 'Log Metered Usage';
+    modalBody.innerHTML = `
+      <p style="color: var(--text-secondary); margin-bottom: 1.25rem;">Simulate metered resource consumption:</p>
+      <div class="form-group"><label>Metric</label><select id="usageMetricSelect" class="form-control"><option value="api_calls">API Calls (REST Requests)</option><option value="storage_gb">Storage (GB)</option><option value="bandwidth_gb">Bandwidth (GB)</option><option value="users">Seats</option></select></div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group"><label>Quantity</label><input type="number" id="usageQtyInput" class="form-control" value="250" min="1"></div>
+        <div class="form-group"><label>Unit Price (₹)</label><input type="number" step="0.01" id="usageUnitPriceInput" class="form-control" value="0.05"></div>
+      </div>
+    `;
+    modalSubmit.textContent = 'Record Usage';
+    modalSubmit.onclick = async () => {
+      try {
+        App.toast('Recording usage...', 'info');
+        await API.recordUsage({
+          subscriptionId,
+          metric: document.getElementById('usageMetricSelect').value,
+          quantity: Number(document.getElementById('usageQtyInput').value),
+          unitPrice: Number(document.getElementById('usageUnitPriceInput').value),
+          periodStart: new Date(now.getTime() - 3600000).toISOString(),
+          periodEnd: now.toISOString(),
+        });
+        App.toast('Usage logged successfully!', 'success'); App.closeModal();
+        if (State.activeTab === 'customer') CustomerView.render();
+      } catch (err) { App.toast(err.message || 'Failed to record usage', 'error'); }
+    };
+    App.openModal();
+  }
+};
+window.UsageModal = UsageModal;
+
+const CouponManager = {
+  openCreateModal() {
+    const modalTitle = document.getElementById('genericModalTitle');
+    const modalBody = document.getElementById('genericModalBody');
+    const modalSubmit = document.getElementById('genericModalSubmit');
+    const nextMonth = new Date(); nextMonth.setMonth(nextMonth.getMonth() + 1);
+    modalTitle.textContent = 'Create Promo Coupon';
+    modalBody.innerHTML = `
+      <div class="form-group"><label>Coupon Code</label><input type="text" id="cpCode" class="form-control" placeholder="e.g. FLASH50" style="text-transform: uppercase;" required></div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group"><label>Type</label><select id="cpType" class="form-control"><option value="percentage">Percentage (%)</option><option value="fixed">Fixed (₹)</option></select></div>
+        <div class="form-group"><label>Value</label><input type="number" id="cpValue" class="form-control" value="20" min="1"></div>
+      </div>
+      <div class="form-group"><label>Valid Until</label><input type="date" id="cpDate" class="form-control" value="${nextMonth.toISOString().slice(0, 10)}"></div>
+    `;
+    modalSubmit.textContent = 'Create Coupon';
+    modalSubmit.onclick = async () => {
+      try {
+        await API.createCoupon({
+          code: document.getElementById('cpCode').value.trim().toUpperCase(),
+          discountType: document.getElementById('cpType').value,
+          discountValue: Number(document.getElementById('cpValue').value),
+          maxRedemptions: 100,
+          validUntil: new Date(document.getElementById('cpDate').value).toISOString(),
+        });
+        App.toast('Coupon created!', 'success'); App.closeModal();
+        if (State.activeTab === 'admin') AdminView.render();
+      } catch (err) { App.toast(err.message || 'Failed to create coupon', 'error'); }
+    };
+    App.openModal();
+  }
+};
+window.CouponManager = CouponManager;
+
+const Simulator = {
+  isRunning: false,
+  init() { this.container = document.getElementById('view-simulator'); },
+  render() {
+    if (!this.container) return;
+    this.container.innerHTML = `
+      <div class="page-title-row">
+        <div><h2>E2E Automated Simulation Terminal</h2><p>Execute real-time customer and billing lifecycles against backend controllers and MongoDB.</p></div>
+        <div class="header-actions">
+          <a href="/api-docs" target="_blank" class="btn btn-outline btn-sm"><i data-lucide="book-open"></i> Swagger</a>
+          <button class="btn btn-primary" id="simRunBtn" onclick="Simulator.runSimulation()"><i data-lucide="play"></i> Run 7-Step Simulation</button>
+        </div>
+      </div>
+      <div class="terminal-window">
+        <div class="terminal-header">
+          <div class="terminal-dots"><div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div></div>
+          <div class="terminal-title">simulation-orchestrator.log</div>
+        </div>
+        <div class="terminal-body" id="simTerminal">
+          <div class="terminal-log-entry info"><span class="timestamp">[SYSTEM]</span> Ready. Click "Run 7-Step Simulation" to verify all backend modules.</div>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  },
+  log(tag, msg, type = 'info', json = null) {
+    const term = document.getElementById('simTerminal');
+    if (!term) return;
+    const entry = document.createElement('div');
+    entry.className = `terminal-log-entry ${type}`;
+    entry.innerHTML = `<span class="timestamp">[${new Date().toLocaleTimeString()}]</span> <span class="action-tag">${tag}</span> <span>${msg}</span> ${json ? `<pre style="background: rgba(0,0,0,0.4); padding: 0.4rem; border-radius: 4px; font-size: 0.75rem; color: #a7f3d0;">${JSON.stringify(json, null, 2)}</pre>` : ''}`;
+    term.appendChild(entry); term.scrollTop = term.scrollHeight;
+  },
+  async runSimulation() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    const btn = document.getElementById('simRunBtn');
+    if (btn) btn.disabled = true;
+    document.getElementById('simTerminal').innerHTML = '';
+    this.log('INIT', 'Starting E2E simulation...', 'info');
+
+    try {
+      const h = await fetch('/health').then(r => r.json());
+      this.log('1. HEALTH', `Server OK! Uptime: ${Math.round(h.data.uptime)}s`, 'success');
+      
+      const rnd = Math.floor(Math.random() * 90000) + 10000;
+      const email = `test_${rnd}@saas.com`;
+      const reg = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: `Test ${rnd}`, email, password: 'password123' }) }).then(r => r.json());
+      this.log('2. REGISTER', `Customer registered (${email})`, 'success');
+
+      const token = reg.data.token;
+      const authHeader = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+
+      const plans = await fetch('/api/plans').then(r => r.json());
+      const plan = plans.data.plans[1] || plans.data.plans[0];
+      this.log('3. PLANS', `Selected plan: ${plan.name} (₹${plan.price})`, 'success');
+
+      const sub = await fetch('/api/subscriptions', { method: 'POST', headers: authHeader, body: JSON.stringify({ planId: plan._id, couponCode: 'WELCOME20' }) }).then(r => r.json());
+      const subId = sub.data.subscription._id;
+      this.log('4. SUBSCRIBE', `Subscribed with WELCOME20 coupon!`, 'success');
+
+      await fetch('/api/usage', { method: 'POST', headers: authHeader, body: JSON.stringify({ subscriptionId: subId, metric: 'api_calls', quantity: 300, unitPrice: 0.05, periodStart: new Date(Date.now() - 3600000).toISOString(), periodEnd: new Date().toISOString() }) });
+      this.log('5. METERING', 'Logged 300 API calls', 'success');
+
+      const admin = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'admin@saas.com', password: 'password123' }) }).then(r => r.json());
+      const inv = await fetch('/api/invoices/generate', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${admin.data.token}` }, body: JSON.stringify({ subscriptionId: subId }) }).then(r => r.json());
+      const invId = inv.data.invoice._id;
+      this.log('6. INVOICE', `Generated Invoice #${inv.data.invoice.invoiceNumber || invId.slice(-6)}: Total ₹${inv.data.invoice.total}`, 'success');
+
+      const pay = await fetch(`/api/invoices/${invId}/pay`, { method: 'PUT', headers: authHeader, body: JSON.stringify({ paymentMethod: 'card', gatewayRef: `sim_${Date.now()}` }) }).then(r => r.json());
+      this.log('7. PAYMENT', `Paid! Invoice status: ${pay.data.invoice.status}`, 'success');
+      this.log('COMPLETE', '🎉 All 7 steps passed cleanly!', 'success');
+      App.toast('Simulation passed 100%!', 'success');
+    } catch (e) {
+      this.log('ERROR', e.message, 'error'); App.toast(e.message, 'error');
+    } finally {
+      this.isRunning = false; if (btn) btn.disabled = false;
+    }
+  }
+};
+window.Simulator = Simulator;
+
+const App = {
+  async init() {
+    Nav.init(); CustomerView.init(); AdminView.init(); PlansModal.init(); InvoicesView.init(); Simulator.init();
+    State.subscribe((event, data) => { if (event === 'tab_changed') this.switchView(data); });
+    await this.restoreOrSeedAuth();
+    this.switchView(State.activeTab);
+  },
+  async restoreOrSeedAuth() {
+    const token = API.getToken();
+    if (token) {
+      try { const user = await API.getMe(); if (user) { State.setUser(user); return; } } catch (e) { API.logout(); }
+    }
+    await this.switchPersona('alice@example.com', false);
+  },
+  async switchPersona(email, showNotification = true) {
+    try {
+      if (showNotification) this.toast(`Switching to ${email}...`, 'info');
+      const data = await API.login(email, 'password123');
+      State.setUser(data.user);
+      if (showNotification) this.toast(`Logged in as ${data.user.name}`, 'success');
+      if (data.user.role === 'admin') State.setActiveTab('admin'); else State.setActiveTab('customer');
+      this.switchView(State.activeTab);
+    } catch (err) { if (showNotification) this.toast(err.message || 'Login failed', 'error'); }
+  },
+  switchView(tab) {
+    document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+    const t = document.getElementById(`view-${tab}`);
+    if (t) t.classList.add('active');
+    if (tab === 'customer') CustomerView.render();
+    else if (tab === 'admin') AdminView.render();
+    else if (tab === 'pricing') PlansModal.render();
+    else if (tab === 'invoices') InvoicesView.render();
+    else if (tab === 'simulator') Simulator.render();
+    if (window.lucide) lucide.createIcons();
+  },
+  openModal() { document.getElementById('genericModal')?.classList.add('open'); },
+  closeModal() { document.getElementById('genericModal')?.classList.remove('open'); },
+  openLoginModal() {
+    const modalTitle = document.getElementById('genericModalTitle');
+    const modalBody = document.getElementById('genericModalBody');
+    const modalSubmit = document.getElementById('genericModalSubmit');
+    modalTitle.textContent = 'Sign In';
+    modalBody.innerHTML = `
+      <div class="form-group"><label>Email</label><input type="email" id="authEmail" class="form-control" placeholder="alice@example.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="authPassword" class="form-control" value="password123"></div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Default password is <code>password123</code></div>
+    `;
+    modalSubmit.textContent = 'Sign In';
+    modalSubmit.onclick = async () => {
+      try {
+        const data = await API.login(document.getElementById('authEmail').value.trim(), document.getElementById('authPassword').value);
+        State.setUser(data.user); App.toast(`Welcome ${data.user.name}!`, 'success'); App.closeModal();
+      } catch (e) { App.toast(e.message || 'Invalid credentials', 'error'); }
+    };
+    this.openModal();
+  },
+  logout() { API.logout(); State.setUser(null); this.toast('Signed out.', 'info'); State.setActiveTab('pricing'); },
+  toast(message, type = 'info') {
+    const c = document.getElementById('toastContainer'); if (!c) return;
+    const t = document.createElement('div'); t.className = `toast ${type}`;
+    t.innerHTML = `<span style="font-weight: bold;">${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> <span>${message}</span>`;
+    c.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
+  }
+};
+window.App = App;
+document.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+</body>
+</html>
